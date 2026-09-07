@@ -8,7 +8,7 @@
 #       api-key: ${{ secrets.XYZ_API_KEY }}
 #
 name: "CyberXYZ DepAlert"
-description: "Fail the build on malicious or quarantined dependencies. Scans package-lock.json, requirements*.txt, Pipfile.lock, poetry.lock and go.sum against the CyberXYZ decision engine."
+description: "Fail the build on malicious or quarantined dependencies, checked against the CyberXYZ decision engine."
 author: "CyberXYZ Security"
 branding:
   icon: "shield"
