@@ -72,3 +72,15 @@ jobs:
           api-key: ${{ secrets.XYZ_API_KEY }}
           working-directory: .
       - run: test "${{ steps.gate.outputs.verdict }}" = "allow"
+
+  consumer-by-tag:
+    name: consumer reference CyberXYZSecurity/depalert-action@v1 resolves
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: CyberXYZSecurity/depalert-action@v1
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          working-directory: tests/clean
+      - run: test "${{ steps.gate.outputs.verdict }}" = "allow"
