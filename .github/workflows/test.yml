@@ -1,0 +1,74 @@
+name: Test depalert composite action
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "action.yml"
+      - "tests/**"
+      - ".github/workflows/test.yml"
+
+jobs:
+  blocks-malicious:
+    name: fixture with axios@1.14.1 must fail with verdict=block
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        continue-on-error: true
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          manifests: tests/block/package-lock.json
+      - name: assert
+        run: |
+          echo "outcome=${{ steps.gate.outcome }} verdict=${{ steps.gate.outputs.verdict }} exit=${{ steps.gate.outputs.exit-code }} env=$XYZ_VERDICT"
+          test "${{ steps.gate.outcome }}" = "failure"
+          test "${{ steps.gate.outputs.verdict }}" = "block"
+          test "${{ steps.gate.outputs.exit-code }}" = "1"
+          test "$XYZ_VERDICT" = "block"
+
+  passes-clean:
+    name: fixture with lodash@4.17.21 must pass with verdict=allow
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          manifests: tests/clean/package-lock.json
+      - name: assert
+        run: |
+          echo "verdict=${{ steps.gate.outputs.verdict }}"
+          test "${{ steps.gate.outputs.verdict }}" = "allow"
+
+  autodetect-in-subdir:
+    name: auto-detect manifests via working-directory (block fixture)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        continue-on-error: true
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          working-directory: tests/block
+      - run: |
+          echo "outcome=${{ steps.gate.outcome }} verdict=${{ steps.gate.outputs.verdict }} env=$XYZ_VERDICT"
+          test "${{ steps.gate.outcome }}" = "failure"
+          test "${{ steps.gate.outputs.verdict }}" = "block"
+
+  no-manifests:
+    name: no manifests found is allow, not an error
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          working-directory: .
+      - run: test "${{ steps.gate.outputs.verdict }}" = "allow"
