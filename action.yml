@@ -50,10 +50,11 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # No pip cache: setup-python's cache needs a requirements/pyproject file in
+    # the consumer's repo and hard-fails without one (npm-only or Go-only repos).
     - uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-        cache: "pip"
 
     - shell: bash
       run: pip install --quiet cyberxyz-scanner
