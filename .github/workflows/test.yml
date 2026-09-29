@@ -84,3 +84,36 @@ jobs:
           api-key: ${{ secrets.XYZ_API_KEY }}
           working-directory: tests/clean
       - run: test "${{ steps.gate.outputs.verdict }}" = "allow"
+
+  cli-version-default-range:
+    name: default cli-version installs the newest 1.4.x (>= 1.4.66)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          manifests: tests/clean/package-lock.json
+      - run: |
+          v="$(python -m pip show cyberxyz-scanner | sed -n 's/^Version: //p')"
+          echo "installed cyberxyz-scanner $v"
+          python - "$v" <<'PY'
+          import sys
+          v = tuple(int(x) for x in sys.argv[1].split(".")[:3])
+          assert (1, 4, 66) <= v < (1, 5), v
+          PY
+
+  cli-version-exact:
+    name: an exact cli-version installs exactly that release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          manifests: tests/clean/package-lock.json
+          cli-version: "1.4.69"
+      - run: |
+          python -m pip show cyberxyz-scanner | grep -x "Version: 1.4.69"
