@@ -36,9 +36,9 @@ inputs:
     required: false
     default: "false"
   cli-version:
-    description: "cyberxyz-scanner version to install. 'latest' installs the newest release."
+    description: "cyberxyz-scanner to install: a pip version range (default: the newest 1.4.x release, at least 1.4.66), an exact version such as 1.4.70 for reproducible runs, or 'latest'."
     required: false
-    default: "1.4.59"
+    default: ">=1.4.66,<1.5"
   fail-on:
     description: "Narrowest verdict that fails the build: block | quarantine | alert"
     required: false
@@ -108,7 +108,13 @@ runs:
         venv="${RUNNER_TEMP:-/tmp}/cyberxyz-cli"
         "$PY" -m venv "$venv" >/dev/null || warn "could not create a venv for the CLI"
         bin="$venv/bin"; [ -d "$bin" ] || bin="$venv/Scripts"
-        spec="cyberxyz-scanner"; [ "$CLI_VERSION" = "latest" ] || spec="cyberxyz-scanner==$CLI_VERSION"
+        # "" / latest: newest release. 1.4.70: exactly that. >=1.4.66,<1.5 (or
+        # any PEP 440 specifier): the newest release in the range.
+        case "$CLI_VERSION" in
+          ""|latest) spec="cyberxyz-scanner" ;;
+          [0-9]*)    spec="cyberxyz-scanner==$CLI_VERSION" ;;
+          *)         spec="cyberxyz-scanner$CLI_VERSION" ;;
+        esac
         "$bin/python" -m pip install --quiet --disable-pip-version-check "$spec" || warn "could not install $spec"
         args="--format github"
         [ "$NETWORK_LOCK" = "true" ] && args="$args --network-lock"
@@ -128,8 +134,13 @@ runs:
       env:
         CLI_VERSION: ${{ inputs.cli-version }}
       run: |
-        spec="cyberxyz-scanner"; [ "$CLI_VERSION" = "latest" ] || spec="cyberxyz-scanner==$CLI_VERSION"
+        case "$CLI_VERSION" in
+          ""|latest) spec="cyberxyz-scanner" ;;
+          [0-9]*)    spec="cyberxyz-scanner==$CLI_VERSION" ;;
+          *)         spec="cyberxyz-scanner$CLI_VERSION" ;;
+        esac
         pip install --quiet "$spec"
+        xyz --version || true
 
     - id: scan
       if: inputs.mode == 'scan'

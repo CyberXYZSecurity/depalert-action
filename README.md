@@ -93,12 +93,32 @@ Notes:
 | `mode` | `scan` | `scan` or `protect` |
 | `network-lock` | `false` | protect: blackhole public registries in /etc/hosts |
 | `strict` | `false` | protect: fail the step if the proxy could not be configured |
-| `cli-version` | the version this action was released with | `cyberxyz-scanner` version, or `latest` |
+| `cli-version` | `>=1.4.66,<1.5` | `cyberxyz-scanner` to install: a pip range, an exact version (`1.4.70`), or `latest` |
 | `fail-on` | `block` | scan: `block`, `quarantine` or `alert` |
 | `manifests` | auto-detect | scan: space-separated manifest paths |
 | `working-directory` | `.` | scan: where to auto-detect manifests |
 | `python-version` | `3.11` | scan: Python used to run the CLI |
 | `api-url` | `https://api.cyberxyz.io` | API base URL |
+
+## Which CLI version runs
+
+The action installs the `cyberxyz-scanner` CLI from PyPI on every run. By default
+it takes the newest 1.4.x release, at least 1.4.66 (`cli-version: ">=1.4.66,<1.5"`),
+so fixes to the gate reach your pipeline without a new action release, while a
+future 1.5 or 2.0 (which may change flags or exit codes) never arrives unannounced.
+The trade-off is reproducibility: two runs a day apart can use different patch
+releases. To make runs byte-for-byte repeatable, pin an exact version and bump it
+yourself:
+
+```yaml
+      - uses: CyberXYZSecurity/depalert-action@v1
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          cli-version: "1.4.70"      # exact; or "latest", or any pip range
+```
+
+Any PEP 440 specifier works (`~=1.4.66`, `>=1.4.66,<1.5`); a value that starts
+with a digit is taken as an exact version.
 
 Licensed under Apache-2.0 (see LICENSE). The action installs the `cyberxyz-scanner` CLI from PyPI at run time; the CLI itself is proprietary.
 
