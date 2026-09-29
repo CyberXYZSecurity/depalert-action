@@ -124,7 +124,7 @@ Licensed under Apache-2.0 (see LICENSE). The action installs the `cyberxyz-scann
 
 Publishing checklist (one-time):
 1. Copy this directory (action.yml, README.md, LICENSE, tests/) to the public repository `CyberXYZSecurity/depalert-action`, and move `.github/workflows/test-depalert-action.yml` with it, changing `uses: ./integrations/github-action` to `uses: ./`.
-2. Bump the `cli-version` default in action.yml to the released CLI version (a test in xyz-cli keeps it equal to pyproject.toml). `mode: protect` needs a CLI that has `xyz ci protect`.
+2. The `cli-version` default in action.yml is a range (`>=1.4.66,<1.5`), so a CLI patch release needs no action release. A test in xyz-cli keeps the range admitting the version in pyproject.toml; when the CLI moves to 1.5, raise the ceiling (and the floor) and cut an action release. `mode: protect` needs a CLI that has `xyz ci protect`.
 3. Tag `v1.0.0` and a moving `v1` tag.
 4. Draft a release and tick "Publish this Action to the GitHub Marketplace".
 5. Update `XYZ-Web Content/docs/ci.html` to show the 3-line form first.
