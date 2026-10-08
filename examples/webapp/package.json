@@ -1,0 +1,10 @@
+{
+  "name": "webapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Demo app for the CyberXYZ gate. This pull request bumps faker to 6.6.6, the sabotaged release that npm still serves as latest.",
+  "dependencies": {
+    "express": "4.19.2",
+    "faker": "6.6.6"
+  }
+}
