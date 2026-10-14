@@ -79,11 +79,49 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: gate
-        uses: CyberXYZSecurity/depalert-action@v1
+        # deliberate: this job checks the published tag, so the code-scan finding is accepted
+        uses: CyberXYZSecurity/depalert-action@v1  # xyz:ignore[ci-secrets-to-unpinned-action]
         with:
           api-key: ${{ secrets.XYZ_API_KEY }}
           working-directory: tests/clean
       - run: test "${{ steps.gate.outputs.verdict }}" = "allow"
+
+  code-scan-fails-on-a-vulnerable-workflow:
+    name: code-scan fails the build on the vulnerable workflow fixture (no manifests, verdict allow)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        continue-on-error: true
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          working-directory: tests/code-scan
+      - name: assert
+        env:
+          OUTCOME: ${{ steps.gate.outcome }}
+          VERDICT: ${{ steps.gate.outputs.verdict }}
+          CODE_EXIT: ${{ steps.gate.outputs.code-scan-exit }}
+        run: |
+          echo "outcome=$OUTCOME verdict=$VERDICT code-scan-exit=$CODE_EXIT"
+          test "$OUTCOME" = "failure"
+          test "$VERDICT" = "allow"
+          test "$CODE_EXIT" = "1"
+
+  code-scan-off:
+    name: code-scan "false" skips it (same fixture passes)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          working-directory: tests/code-scan
+          code-scan: "false"
+      - env:
+          CODE_EXIT: ${{ steps.gate.outputs.code-scan-exit }}
+        run: test -z "$CODE_EXIT"
 
   cli-version-default-range:
     name: default cli-version installs the newest 1.4.x (>= 1.4.66)

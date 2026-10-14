@@ -18,6 +18,29 @@ jobs:
           fail-on: block   # block | quarantine | alert
 ```
 
+## Workflow and AI-agent checks (`code-scan`)
+
+In `scan` mode the action also runs two offline checks of the CLI (no API call,
+nothing uploaded):
+
+- `xyz code-scan ci .github`: what GitHub runs. Known-compromised actions
+  (`actions-cool/issues-helper`, `tj-actions/changed-files` before 46.0.1,
+  `reviewdog/action-setup@v1`), unpinned actions in workflows anyone can trigger
+  from an issue or discussion, `${{ github.event... }}` script injection,
+  `pull_request_target` checkouts, secrets handed to unpinned actions.
+- `xyz code-scan agents .`: what AI agents and editors run when the repository is
+  opened. Claude Code / Gemini hooks, VS Code `folderOpen` tasks and agent rules,
+  which is how the Mini Shai-Hulud worm spreads (a SessionStart hook and a
+  folderOpen task starting an obfuscated `.claude/index.js`).
+
+High and critical findings fail the build (`code-scan-fail-on: high`). Medium
+findings, such as a hook that runs your own script with no other sign of a worm
+drop, are printed in the log and do not fail it. Accept a reviewed finding with
+`# xyz:ignore[rule-id]` on its line (YAML, JSONC, markdown), or in
+`.xyz-ignore.yml` for strict JSON such as `.claude/settings.json` (see the CLI
+README). `code-scan: "false"` turns both checks off; a `cli-version` without
+`xyz code-scan agents` skips that check with a warning.
+
 ## Route the job's own installs through CyberXYZ (`mode: protect`)
 
 `scan` checks lockfiles after the fact. `protect` goes first and points every
@@ -96,7 +119,9 @@ Notes:
 | `cli-version` | `>=1.4.66,<1.5` | `cyberxyz-scanner` to install: a pip range, an exact version (`1.4.70`), or `latest` |
 | `fail-on` | `block` | scan: `block`, `quarantine` or `alert` |
 | `manifests` | auto-detect | scan: space-separated manifest paths |
-| `working-directory` | `.` | scan: where to auto-detect manifests |
+| `working-directory` | `.` | scan: where to auto-detect manifests; also the repository root code-scan reads |
+| `code-scan` | `true` | scan: also run `xyz code-scan ci` (on `.github`) and `xyz code-scan agents` |
+| `code-scan-fail-on` | `high` | scan: lowest code-scan severity that fails the build: `critical`, `high`, `medium`, `low` or `none` |
 | `python-version` | `3.11` | scan: Python used to run the CLI |
 | `api-url` | `https://api.cyberxyz.io` | API base URL |
 

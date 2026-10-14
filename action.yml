@@ -7,7 +7,13 @@
 #     with:
 #       api-key: ${{ secrets.XYZ_API_KEY }}
 #
-# mode: scan (default) checks the lockfiles and gates the build.
+# mode: scan (default) checks the lockfiles and gates the build. It also runs
+# the offline `xyz code-scan ci` (.github: known-compromised actions, unpinned
+# actions anyone can trigger, script injection ...) and `xyz code-scan agents`
+# (Claude Code / Gemini hooks, VS Code folderOpen tasks and agent rules that run
+# code when the repository is opened) and fails on high or critical
+# (code-scan-fail-on); medium findings are printed only. code-scan: "false"
+# turns them off.
 # mode: protect routes the job's own npm / pip / uv / yarn / go / NuGet
 # installs through the CyberXYZ proxy; put it before your install steps and
 # keep a scan step after them.
@@ -56,9 +62,18 @@ inputs:
     required: false
     default: "3.11"
   working-directory:
-    description: "Directory to scan when manifests are auto-detected"
+    description: "Directory to scan when manifests are auto-detected, and the repository root for code-scan"
     required: false
     default: "."
+  code-scan:
+    description: "scan mode: also run the offline `xyz code-scan ci` (on .github) and `xyz code-scan agents` checks. true (default) or false."
+    required: false
+    default: "true"
+  code-scan-fail-on:
+    description: "Lowest code-scan severity that fails the build: critical | high (default) | medium | low | none. Medium findings (a hook that runs a repo script, with no other sign of a worm drop) are printed either way."
+    required: false
+    default: "high"
+
 
 outputs:
   verdict:
@@ -67,6 +82,10 @@ outputs:
   exit-code:
     description: "0 clean, 1 block, 2 quarantine, 3 alert, 4 backend unreachable"
     value: ${{ steps.scan.outputs.exit }}
+  code-scan-exit:
+    description: "code-scan ci + agents: 0 nothing at or above code-scan-fail-on, 1 findings, 2+ could not run. Empty when code-scan is off."
+    value: ${{ steps.codescan.outputs.exit }}
+
 
 runs:
   using: "composite"
@@ -199,6 +218,36 @@ runs:
         echo "XYZ_VERDICT=$v" >> "$GITHUB_ENV"
         echo "### CyberXYZ DepAlert: **$v**" >> "$GITHUB_STEP_SUMMARY"
 
+    # Offline checks of what GitHub runs (.github) and of what AI agents and
+    # editors run when the repository is opened. Never fails itself; the
+    # code-scan gate below does. Findings are printed in full, so medium ones
+    # show in the log without failing the build.
+    - id: codescan
+      if: inputs.mode == 'scan' && inputs.code-scan == 'true'
+      shell: bash
+      env:
+        WORKDIR: ${{ inputs.working-directory }}
+        CODE_FAIL_ON: ${{ inputs.code-scan-fail-on }}
+      run: |
+        set +e
+        worst=0
+        cd "$WORKDIR" || { echo "::error::working-directory '$WORKDIR' not found"; echo "exit=4" >> "$GITHUB_OUTPUT"; exit 0; }
+        run_cs () {  # $1 scanner, $2 target
+          if ! xyz code-scan "$1" --help >/dev/null 2>&1; then
+            echo "::warning title=CyberXYZ code-scan::xyz code-scan $1 needs a newer cyberxyz-scanner (cli-version), skipped"
+            return 0
+          fi
+          echo "xyz code-scan $1 $2 --fail-on $CODE_FAIL_ON"
+          xyz code-scan "$1" "$2" --no-upload --fail-on "$CODE_FAIL_ON"
+          rc=$?
+          if [ "$rc" -gt "$worst" ]; then worst=$rc; fi
+        }
+        if [ -d .github ]; then run_cs ci .github; fi
+        run_cs agents .
+        echo "exit=$worst" >> "$GITHUB_OUTPUT"
+        if [ "$worst" = 0 ]; then r="nothing at or above $CODE_FAIL_ON"; else r="exit $worst, see the log"; fi
+        echo "### CyberXYZ code-scan (ci, agents): $r" >> "$GITHUB_STEP_SUMMARY"
+
     - name: gate
       # mode guard: when scan is skipped its outputs are empty, and '' != '0'.
       if: inputs.mode == 'scan' && steps.scan.outputs.exit != '0'
@@ -206,3 +255,13 @@ runs:
       run: |
         echo "::error title=CyberXYZ DepAlert::verdict ${{ steps.scan.outputs.verdict }} (exit ${{ steps.scan.outputs.exit }}), see the scan output above"
         exit ${{ steps.scan.outputs.exit }}
+
+    - name: code-scan gate
+      if: inputs.mode == 'scan' && inputs.code-scan == 'true' && steps.codescan.outputs.exit != '0'
+      shell: bash
+      env:
+        CODE_FAIL_ON: ${{ inputs.code-scan-fail-on }}
+        CODE_EXIT: ${{ steps.codescan.outputs.exit }}
+      run: |
+        echo "::error title=CyberXYZ code-scan::findings at or above $CODE_FAIL_ON in .github or the AI-agent / editor autorun files (exit $CODE_EXIT), see the code-scan output above"
+        exit 1
