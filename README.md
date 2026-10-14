@@ -33,9 +33,18 @@ nothing uploaded):
   which is how the Mini Shai-Hulud worm spreads (a SessionStart hook and a
   folderOpen task starting an obfuscated `.claude/index.js`).
 
-High and critical findings fail the build (`code-scan-fail-on: high`). Medium
-findings, such as a hook that runs your own script with no other sign of a worm
-drop, are printed in the log and do not fail it. Accept a reviewed finding with
+Each check has its own threshold, so turning this on does not fail builds over
+findings a repository already had:
+
+- `ci-fail-on: critical` (v1 default): a known-compromised action fails the
+  build; everything else `code-scan ci` finds (an unpinned action that gets
+  secrets, say) is printed. Set it to `high` once your workflows are clean.
+  **A future v2 will default `ci-fail-on` to `high`.**
+- `agents-fail-on: high`: an agent hook or editor task with signs of a worm drop
+  fails the build. A medium finding, such as a hook that runs your own script with
+  nothing else pointing at a drop, is printed and does not fail it.
+
+Accept a reviewed finding with
 `# xyz:ignore[rule-id]` on its line (YAML, JSONC, markdown), or in
 `.xyz-ignore.yml` for strict JSON such as `.claude/settings.json` (see the CLI
 README). `code-scan: "false"` turns both checks off; a `cli-version` without
@@ -121,7 +130,8 @@ Notes:
 | `manifests` | auto-detect | scan: space-separated manifest paths |
 | `working-directory` | `.` | scan: where to auto-detect manifests; also the repository root code-scan reads |
 | `code-scan` | `true` | scan: also run `xyz code-scan ci` (on `.github`) and `xyz code-scan agents` |
-| `code-scan-fail-on` | `high` | scan: lowest code-scan severity that fails the build: `critical`, `high`, `medium`, `low` or `none` |
+| `ci-fail-on` | `critical` | scan: lowest `code-scan ci` severity that fails the build (`critical`, `high`, `medium`, `low`, `none`); v2 will default to `high` |
+| `agents-fail-on` | `high` | scan: lowest `code-scan agents` severity that fails the build |
 | `python-version` | `3.11` | scan: Python used to run the CLI |
 | `api-url` | `https://api.cyberxyz.io` | API base URL |
 

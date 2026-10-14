@@ -86,8 +86,27 @@ jobs:
           working-directory: tests/clean
       - run: test "${{ steps.gate.outputs.verdict }}" = "allow"
 
-  code-scan-fails-on-a-vulnerable-workflow:
-    name: code-scan fails the build on the vulnerable workflow fixture (no manifests, verdict allow)
+  code-scan-defaults-print-ci-findings:
+    name: code-scan v1 defaults pass on a high ci finding (ci-fail-on critical) and print it
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        uses: ./
+        with:
+          api-key: ${{ secrets.XYZ_API_KEY }}
+          working-directory: tests/code-scan
+      - name: assert
+        env:
+          VERDICT: ${{ steps.gate.outputs.verdict }}
+          CODE_EXIT: ${{ steps.gate.outputs.code-scan-exit }}
+        run: |
+          echo "verdict=$VERDICT code-scan-exit=$CODE_EXIT"
+          test "$VERDICT" = "allow"
+          test "$CODE_EXIT" = "0"
+
+  code-scan-ci-fail-on-high:
+    name: ci-fail-on high fails the build on the same fixture
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +116,7 @@ jobs:
         with:
           api-key: ${{ secrets.XYZ_API_KEY }}
           working-directory: tests/code-scan
+          ci-fail-on: high
       - name: assert
         env:
           OUTCOME: ${{ steps.gate.outcome }}
@@ -109,7 +129,7 @@ jobs:
           test "$CODE_EXIT" = "1"
 
   code-scan-off:
-    name: code-scan "false" skips it (same fixture passes)
+    name: code-scan "false" skips both checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -119,6 +139,7 @@ jobs:
           api-key: ${{ secrets.XYZ_API_KEY }}
           working-directory: tests/code-scan
           code-scan: "false"
+          ci-fail-on: high
       - env:
           CODE_EXIT: ${{ steps.gate.outputs.code-scan-exit }}
         run: test -z "$CODE_EXIT"
