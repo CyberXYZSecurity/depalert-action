@@ -1,0 +1,15 @@
+# Test fixture for the action's code-scan step. Deliberately unsafe; it never
+# runs (GitHub only runs workflows in the repository's own .github/workflows).
+# Anyone can open an issue, and the job hands the token to an action pinned to
+# a branch: `xyz code-scan ci` reports ci-secrets-to-unpinned-action (high).
+name: vulnerable fixture
+on:
+  issues:
+    types: [opened]
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: some-org/issue-bot@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
