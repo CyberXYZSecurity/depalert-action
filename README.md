@@ -1,4 +1,4 @@
-# CyberXYZ DepAlert · GitHub Action
+# CyberXYZ Gate · GitHub Action
 
 Fails the build when a dependency in your manifests is known-malicious, quarantined
 by the day-zero signals, or (optionally) matches an advisory. Same verdict as the
