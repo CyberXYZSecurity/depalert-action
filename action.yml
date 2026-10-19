@@ -1,4 +1,4 @@
-# CyberXYZ DepAlert — composite GitHub Action
+# CyberXYZ Gate — composite GitHub Action
 #
 # Publish this directory as its own public repo (e.g. github.com/CyberXYZSecurity/depalert-action)
 # with a v1 tag, then list it on the Marketplace. Consumers add:
@@ -20,7 +20,7 @@
 # installs through the CyberXYZ proxy; put it before your install steps and
 # keep a scan step after them.
 #
-name: "CyberXYZ DepAlert"
+name: "CyberXYZ Gate"
 description: "Route CI installs through the CyberXYZ proxy and fail the build on malicious or quarantined dependencies."
 author: "CyberXYZ Security"
 branding:
@@ -105,7 +105,7 @@ runs:
       run: |
         case "$MODE" in
           scan|protect) ;;
-          *) echo "::error title=CyberXYZ DepAlert::mode must be scan or protect, got '$MODE'"; exit 1 ;;
+          *) echo "::error title=CyberXYZ Gate::mode must be scan or protect, got '$MODE'"; exit 1 ;;
         esac
 
     # ── mode: protect ────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ runs:
                                   run_scan --requirements "$f" ;;
               # Not parsed yet: warn instead of failing the job (the scanner
               # now refuses a non-empty manifest it cannot read).
-              *)                  echo "::warning title=CyberXYZ DepAlert::$f is not a supported manifest yet, skipped" ;;
+              *)                  echo "::warning title=CyberXYZ Gate::$f is not a supported manifest yet, skipped" ;;
             esac
           done
         else
@@ -214,7 +214,7 @@ runs:
             if [ -f "$f" ]; then run_scan --requirements "$f"; found=1; fi
           done
           if [ -f go.sum ]; then run_scan --go-sum go.sum; found=1; fi
-          if [ "$found" = 0 ]; then echo "::notice title=CyberXYZ DepAlert::no dependency manifests found in $WORKDIR, nothing scanned"; fi
+          if [ "$found" = 0 ]; then echo "::notice title=CyberXYZ Gate::no dependency manifests found in $WORKDIR, nothing scanned"; fi
         fi
         case "$worst" in
           0) v=allow ;; 1) v=block ;; 2) v=quarantine ;; 3) v=alert ;; *) v=error ;;
@@ -222,7 +222,7 @@ runs:
         echo "verdict=$v" >> "$GITHUB_OUTPUT"
         echo "exit=$worst" >> "$GITHUB_OUTPUT"
         echo "XYZ_VERDICT=$v" >> "$GITHUB_ENV"
-        echo "### CyberXYZ DepAlert: **$v**" >> "$GITHUB_STEP_SUMMARY"
+        echo "### CyberXYZ Gate: **$v**" >> "$GITHUB_STEP_SUMMARY"
 
     # Offline checks of what GitHub runs (.github) and of what AI agents and
     # editors run when the repository is opened. Never fails itself; the
@@ -260,7 +260,7 @@ runs:
       if: inputs.mode == 'scan' && steps.scan.outputs.exit != '0'
       shell: bash
       run: |
-        echo "::error title=CyberXYZ DepAlert::verdict ${{ steps.scan.outputs.verdict }} (exit ${{ steps.scan.outputs.exit }}), see the scan output above"
+        echo "::error title=CyberXYZ Gate::verdict ${{ steps.scan.outputs.verdict }} (exit ${{ steps.scan.outputs.exit }}), see the scan output above"
         exit ${{ steps.scan.outputs.exit }}
 
     - name: code-scan gate
